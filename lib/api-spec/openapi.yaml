@@ -1,0 +1,165 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: images
+    description: Public webpage image discovery and download operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /images/scan:
+    post:
+      operationId: scanImages
+      tags: [images]
+      summary: Scan a public webpage for images
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScanInput"
+      responses:
+        "200":
+          description: Discovered image assets
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScanResult"
+        "400":
+          description: Invalid or restricted URL
+        "422":
+          description: Page could not be scanned
+  /images/download:
+    post:
+      operationId: downloadImages
+      tags: [images]
+      summary: Download selected images as a ZIP archive
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DownloadInput"
+      responses:
+        "200":
+          description: ZIP archive
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Invalid image selection
+  /images/file:
+    get:
+      operationId: fetchImageFile
+      tags: [images]
+      summary: Fetch one public image through the server
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uri
+        - name: download
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Image file
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Invalid image URL
+        "422":
+          description: Image could not be fetched
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    ScanInput:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+        scope:
+          type: string
+          enum: [page, site]
+          default: page
+        maxPages:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 20
+      required: [url]
+    ImageAsset:
+      type: object
+      properties:
+        url: { type: string, format: uri }
+        filename: { type: string }
+        source:
+          type: string
+          enum: [image, srcset, lazy, social, background]
+        width: { type: ["integer", "null"] }
+        height: { type: ["integer", "null"] }
+        alt: { type: ["string", "null"] }
+      required: [url, filename, source, width, height, alt]
+    ScanResult:
+      type: object
+      properties:
+        pageUrl: { type: string, format: uri }
+        pageTitle: { type: string }
+        images:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImageAsset"
+        warnings:
+          type: array
+          items: { type: string }
+        pagesScanned:
+          type: integer
+        pagesDiscovered:
+          type: integer
+      required: [pageUrl, pageTitle, images, warnings, pagesScanned, pagesDiscovered]
+    DownloadInput:
+      type: object
+      properties:
+        urls:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: { type: string, format: uri }
+      required: [urls]
+
