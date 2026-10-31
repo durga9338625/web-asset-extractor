@@ -31,14 +31,14 @@ jobs:
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install
-      - name: Build
-        run: pnpm build
+      - name: Build Frontend
+        run: pnpm --filter @workspace/image-harvester run build
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist'
+          path: './artifacts/image-harvester/dist'
 
   deploy:
     environment:
